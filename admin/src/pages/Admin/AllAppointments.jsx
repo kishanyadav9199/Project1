@@ -15,6 +15,8 @@ const AllAppointments = () => {
     }
   }, [aToken])
 
+
+
   return (
     <div className='w-full max-w-6xl m-5 '>
 

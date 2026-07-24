@@ -1,9 +1,17 @@
 import mongoose from "mongoose";
 
-const doctorSchema = new mongoose.Schema({
+const doctorSchema = new mongoose.Schema(
+  {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+
+    role: {
+    type: String,
+    enum: ["admin", "doctor"],
+    default: "doctor"
+},
+
     image: { type: String, required: true },
     speciality: { type: String, required: true },
     degree: { type: String, required: true },
@@ -14,7 +22,7 @@ const doctorSchema = new mongoose.Schema({
     slots_booked: { type: Object, default: {} },
     address: { type: Object, required: true },
     date: { type: Number, required: true },
-}, { minimize: false })
-
-const doctorModel = mongoose.models.doctor || mongoose.model("doctor", doctorSchema);
-export default doctorModel;
+  },
+  { minimize: false },
+);
+export default mongoose.model("doctor", doctorSchema);

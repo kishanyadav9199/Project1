@@ -6,27 +6,155 @@ import validator from "validator";
 import { v2 as cloudinary } from "cloudinary";
 import userModel from "../models/userModel.js";
 
-// API for admin login
-const loginAdmin = async (req, res) => {
-    try {
 
-        const { email, password } = req.body
+const createAdmin = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
 
-        if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-            const token = jwt.sign(email + password, process.env.JWT_SECRET)
-            res.json({ success: true, token })
-        } else {
-            res.json({ success: false, message: "Invalid credentials" })
-        }
+    const adminExists = await doctorModel.findOne({
+      email,
+    });
 
-    } catch (error) {
-        console.log(error)
-        res.json({ success: false, message: error.message })
+    if (adminExists) {
+      return res.json({
+        success: false,
+        message: "Admin already exists",
+      });
     }
 
-}
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const admin = await doctorModel.create({
+      name,
+      email,
+      password: hashedPassword,
+
+      role: "admin",
+
+      image: "https://dummyimage.com/300x300",
+      speciality: "Administrator",
+      degree: "Administrator",
+      experience: "0 Years",
+      about: "System Administrator",
+      available: true,
+      fees: 0,
+      slots_booked: {},
+      address: {
+        line1: "Admin",
+        line2: "Admin",
+      },
+      date: Date.now(),
+    });
+
+    res.json({
+      success: true,
+      message: "Admin Created",
+      admin,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
 
+const loginAdmin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const admin = await doctorModel.findOne({
+      email,
+      role: "admin",
+    });
+
+    if (!admin) {
+      return res.json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, admin.password);
+
+    if (!isMatch) {
+      return res.json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        id: admin._id,
+        role: admin.role,
+      },
+      process.env.JWT_SECRET,
+    );
+
+    res.json({
+      success: true,
+      token,
+    });
+  } catch (error) {
+    console.log(error);
+    res.json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+
+
+const loginDoctor = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await doctorModel.findOne({
+      email,
+      role: "doctor",
+    });
+
+    if (!user) {
+      return res.json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+    );
+
+    res.json({
+      success: true,
+      token,
+    });
+  } catch (error) {
+    console.log(error);
+    res.json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 // API to get all appointments list
 const appointmentsAdmin = async (req, res) => {
     try {
@@ -40,6 +168,7 @@ const appointmentsAdmin = async (req, res) => {
     }
 
 }
+
 
 // API for appointment cancellation
 const appointmentCancel = async (req, res) => {
@@ -88,20 +217,22 @@ const addDoctor = async (req, res) => {
         const imageUpload = await cloudinary.uploader.upload(imageFile.path, { resource_type: "image" })
         const imageUrl = imageUpload.secure_url
 
-        const doctorData = {
-            name,
-            email,
-            image: imageUrl,
-            password: hashedPassword,
-            speciality,
-            degree,
-            experience,
-            about,
-            fees,
-            address: JSON.parse(address),
-            date: Date.now()
-        }
+   const doctorData = {
+     name,
+     email,
+     image: imageUrl,
+     password: hashedPassword,
 
+     role: "doctor",
+
+     speciality,
+     degree,
+     experience,
+     about,
+     fees,
+     address: JSON.parse(address),
+     date: Date.now(),
+   };
         const newDoctor = new doctorModel(doctorData)
         await newDoctor.save()
         res.json({ success: true, message: 'Doctor Added' })
@@ -114,12 +245,6 @@ const addDoctor = async (req, res) => {
 }
 
 // API to get all doctors list for admin panel
-
-
-
-
-
-
 
 
 const allDoctors = async (req, res) => {
@@ -158,10 +283,12 @@ const adminDashboard = async (req, res) => {
 }
 
 export {
-    loginAdmin,
-    appointmentsAdmin,
-    appointmentCancel,
-    addDoctor,
-    allDoctors,
-    adminDashboard
-}
+  loginAdmin,
+  appointmentsAdmin,
+  appointmentCancel,
+  addDoctor,
+  allDoctors,
+  adminDashboard,
+  createAdmin,
+
+};

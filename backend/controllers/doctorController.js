@@ -5,32 +5,49 @@ import appointmentModel from "../models/appointmentModel.js";
 
 // API for doctor Login 
 const loginDoctor = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    const user = await doctorModel.findOne({ email });
+    console.log(password, user.password);
 
-    try {
-
-        const { email, password } = req.body
-        const user = await doctorModel.findOne({ email })
-
-        if (!user) {
-            return res.json({ success: false, message: "Invalid credentials" })
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password)
-
-        if (isMatch) {
-            const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET)
-            res.json({ success: true, token })
-        } else {
-            res.json({ success: false, message: "Invalid credentials" })
-        }
-
-
-    } catch (error) {
-        console.log(error)
-        res.json({ success: false, message: error.message })
+    if (!user) {
+      return res.json({
+        success: false,
+        message: "Doctor not found",
+      });
     }
-}
 
+    const isMatch = await (password, user.password);
+    console.log(isMatch);
+    if (!isMatch) {
+      return res.json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+    );
+
+    res.json({
+      success: true,
+      token,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 // API to get doctor appointments for doctor panel
 const appointmentsDoctor = async (req, res) => {
     try {
@@ -190,6 +207,30 @@ const doctorDashboard = async (req, res) => {
     }
 }
 
+
+
+const completeAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+
+    await appointmentModel.findByIdAndUpdate(appointmentId, {
+      isCompleted: true,
+    });
+
+    res.json({
+      success: true,
+      message: "Appointment Completed",
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 export {
     loginDoctor,
     appointmentsDoctor,
@@ -199,5 +240,6 @@ export {
     appointmentComplete,
     doctorDashboard,
     doctorProfile,
-    updateDoctorProfile
+    updateDoctorProfile,
+    completeAppointment
 }

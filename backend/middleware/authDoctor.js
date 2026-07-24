@@ -1,19 +1,38 @@
-import jwt from 'jsonwebtoken'
+import jwt from "jsonwebtoken";
+import doctorModel from "../models/doctorModel.js";
 
-// doctor authentication middleware
 const authDoctor = async (req, res, next) => {
-    const { dtoken } = req.headers
+  try {
+    const { dtoken } = req.headers;
+
     if (!dtoken) {
-        return res.json({ success: false, message: 'Not Authorized Login Again' })
+      return res.json({
+        success: false,
+        message: "Not Authorized Login Again",
+      });
     }
-    try {
-        const token_decode = jwt.verify(dtoken, process.env.JWT_SECRET)
-        req.body.docId = token_decode.id
-        next()
-    } catch (error) {
-        console.log(error)
-        res.json({ success: false, message: error.message })
+
+    const decoded = jwt.verify(dtoken, process.env.JWT_SECRET);
+
+    const doctor = await doctorModel.findById(decoded.id);
+
+    if (!doctor || doctor.role !== "doctor") {
+      return res.json({
+        success: false,
+        message: "Doctor access only",
+      });
     }
-}
+
+    req.body.docId = doctor._id;
+
+    next();
+  } catch (error) {
+    console.log(error);
+    res.json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
 export default authDoctor;
